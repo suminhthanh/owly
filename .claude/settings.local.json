@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv /tmp/owly-temp/owly.png ./public/)",
+      "Bash(mv /tmp/owly-temp/.claude .)",
+      "Bash(rm -rf /tmp/owly-temp)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(brew services:*)",
+      "Bash(createuser -s postgres)",
+      "Bash(createdb -U postgres owly)",
+      "Bash(npx tsc:*)",
+      "Bash(ls -la /Users/hesperus/Projects/owly/src/app/\\\\\\(dashboard\\\\\\)/knowledge/)",
+      "Bash(ls -la /Users/hesperus/Projects/owly/src/app/\\\\\\(dashboard\\\\\\)/team/)",
+      "Bash(ls -la /Users/hesperus/Projects/owly/src/app/\\\\\\(dashboard\\\\\\)/settings/)",
+      "Bash(ls -la /Users/hesperus/Projects/owly/src/app/\\\\\\(dashboard\\\\\\)/conversations/)",
+      "Bash(ls -la /Users/hesperus/Projects/owly/src/app/\\\\\\(dashboard\\\\\\)/tickets/)",
+      "Bash(grep -n adapter /Users/hesperus/Projects/owly/src/generated/prisma/internal/*.ts)",
+      "Bash(npm run:*)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(rm -f /Users/hesperus/Projects/owly/.git/index.lock)",
+      "Bash(git commit:*)",
+      "Bash(find .git -name *.lock -exec rm -f {})",
+      "Bash(2)",
+      "Bash(ls .git/*.lock)",
+      "Bash(GIT_INDEX_FILE= git commit -m \"$\\(cat <<''EOF'':*)",
+      "Bash(ls -la .git/index*)",
+      "Bash(touch .git/test_write_access)",
+      "Bash(rm .git/test_write_access)"
+    ]
+  }
+}
