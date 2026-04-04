@@ -133,7 +133,7 @@ async function main() {
   ];
 
   for (const t of tags) {
-    await prisma.tag.upsert({ where: { id: t.id }, update: {}, create: t });
+    await prisma.tag.upsert({ where: { name: t.name }, update: {}, create: t });
   }
 
   // Create sample canned responses
