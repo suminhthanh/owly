@@ -337,14 +337,28 @@ async function triggerWebhook(args: Record<string, unknown>): Promise<string> {
     });
   }
 
-  const response = await fetch(webhook.url, {
-    method: webhook.method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(webhook.headers as Record<string, string>),
-    },
-    body: JSON.stringify(args.data || {}),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  let response: Response;
+  try {
+    response = await fetch(webhook.url, {
+      method: webhook.method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(webhook.headers as Record<string, string>),
+      },
+      body: JSON.stringify(args.data || {}),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeoutId);
+    const message = error instanceof Error && error.name === "AbortError"
+      ? "Webhook request timed out after 10 seconds"
+      : `Webhook request failed: ${error instanceof Error ? error.message : "Unknown error"}`;
+    return JSON.stringify({ success: false, message });
+  }
+  clearTimeout(timeoutId);
 
   return JSON.stringify({
     success: response.ok,

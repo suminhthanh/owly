@@ -3,7 +3,17 @@ import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET || "owly-secret-change-this";
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret && process.env.NODE_ENV !== "test") {
+    throw new Error(
+      "JWT_SECRET environment variable is required. Set it before starting the application."
+    );
+  }
+  return secret || "test-only-fallback-secret";
+}
+
+const JWT_SECRET = getJwtSecret();
 const TOKEN_NAME = "owly-token";
 const TOKEN_EXPIRY = "7d";
 

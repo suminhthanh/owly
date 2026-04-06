@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { maskSettingsSecrets } from "@/lib/security";
+import { updateSettingsSchema, validateBody } from "@/lib/validations";
 
 export async function GET() {
   try {
@@ -13,7 +15,7 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json(settings);
+    return NextResponse.json(maskSettingsSecrets(settings));
   } catch (error) {
     console.error("Failed to fetch settings:", error);
     return NextResponse.json(
@@ -32,13 +34,18 @@ export async function PUT(request: Request) {
     delete body.createdAt;
     delete body.updatedAt;
 
+    const validation = validateBody(updateSettingsSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
     const settings = await prisma.settings.upsert({
       where: { id: "default" },
-      update: body,
-      create: { id: "default", ...body },
+      update: validation.data,
+      create: { id: "default", ...validation.data },
     });
 
-    return NextResponse.json(settings);
+    return NextResponse.json(maskSettingsSecrets(settings));
   } catch (error) {
     console.error("Failed to update settings:", error);
     return NextResponse.json(

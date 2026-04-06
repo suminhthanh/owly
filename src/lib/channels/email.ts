@@ -3,6 +3,7 @@ import { simpleParser, ParsedMail } from "mailparser";
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 import { chat, createNewConversation } from "@/lib/ai/engine";
+import { escapeHtml, sanitizeEmailSubject } from "@/lib/security";
 
 interface EmailConfig {
   imapHost: string;
@@ -94,7 +95,7 @@ async function processEmail(parsed: ParsedMail, config: EmailConfig) {
   await transporter.sendMail({
     from: config.smtpFrom,
     to: fromAddress,
-    subject: `Re: ${subject}`,
+    subject: sanitizeEmailSubject(`Re: ${subject}`),
     text: aiResponse,
     html: buildEmailHtml(aiResponse),
     inReplyTo: parsed.messageId,
@@ -109,11 +110,11 @@ function buildEmailHtml(text: string): string {
       <div style="padding: 20px;">
         ${text
           .split("\n")
-          .map((line) => `<p style="margin: 0 0 10px 0; color: #1E293B;">${line}</p>`)
+          .map((line) => `<p style="margin: 0 0 10px 0; color: #1E293B;">${escapeHtml(line)}</p>`)
           .join("")}
       </div>
       <div style="border-top: 1px solid #E2E8F0; padding: 15px 20px; color: #64748B; font-size: 12px;">
-        Powered by ${settings_name}
+        Powered by ${escapeHtml(settings_name)}
       </div>
     </div>
   `;
