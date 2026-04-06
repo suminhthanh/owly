@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
-export async function GET() {
-  const webhooks = await prisma.webhook.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json(webhooks);
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const { page, limit, skip, take } = parsePagination(searchParams);
+
+  const [webhooks, total] = await Promise.all([
+    prisma.webhook.findMany({
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.webhook.count(),
+  ]);
+
+  return NextResponse.json(paginatedResponse(webhooks, total, page, limit));
 }
 
 export async function POST(request: NextRequest) {

@@ -52,6 +52,7 @@ function createMockPrismaClient() {
     "channel",
     "schedule",
     "webhook",
+    "webhookDelivery",
     "activityLog",
     "sLARule",
     "cannedResponse",

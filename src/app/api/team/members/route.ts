@@ -1,25 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const departmentId = searchParams.get("departmentId");
 
     const where = departmentId ? { departmentId } : {};
 
-    const members = await prisma.teamMember.findMany({
-      where,
-      orderBy: { name: "asc" },
-      include: {
-        department: {
-          select: { id: true, name: true },
+    const [members, total] = await Promise.all([
+      prisma.teamMember.findMany({
+        where,
+        orderBy: { name: "asc" },
+        skip,
+        take,
+        include: {
+          department: {
+            select: { id: true, name: true },
+          },
         },
-      },
-    });
+      }),
+      prisma.teamMember.count({ where }),
+    ]);
 
-    return NextResponse.json(members);
+    return NextResponse.json(paginatedResponse(members, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch members:", error);
     return NextResponse.json(

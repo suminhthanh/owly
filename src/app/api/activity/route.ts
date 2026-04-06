@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const entity = searchParams.get("entity");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
@@ -28,19 +28,13 @@ export async function GET(request: NextRequest) {
       prisma.activityLog.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip,
+        take,
       }),
       prisma.activityLog.count({ where }),
     ]);
 
-    return NextResponse.json({
-      activities,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    });
+    return NextResponse.json(paginatedResponse(activities, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch activity logs:", error);
     return NextResponse.json(

@@ -19,6 +19,7 @@ describe("GET /api/tickets", () => {
         assignedTo: null,
       },
     ]);
+    mockPrisma.ticket.count.mockResolvedValue(1);
 
     const { GET } = await import("@/app/api/tickets/route");
     const request = createRequest("/api/tickets");
@@ -26,12 +27,14 @@ describe("GET /api/tickets", () => {
     const data = await parseJsonResponse(response);
 
     expect(response.status).toBe(200);
-    expect(data).toHaveLength(1);
-    expect(data[0].title).toBe("Order not delivered");
+    expect(data.data).toHaveLength(1);
+    expect(data.data[0].title).toBe("Order not delivered");
+    expect(data.pagination.total).toBe(1);
   });
 
   it("should filter by status", async () => {
     mockPrisma.ticket.findMany.mockResolvedValue([]);
+    mockPrisma.ticket.count.mockResolvedValue(0);
 
     const { GET } = await import("@/app/api/tickets/route");
     const request = createRequest("/api/tickets", {
@@ -48,6 +51,7 @@ describe("GET /api/tickets", () => {
 
   it("should filter by priority", async () => {
     mockPrisma.ticket.findMany.mockResolvedValue([]);
+    mockPrisma.ticket.count.mockResolvedValue(0);
 
     const { GET } = await import("@/app/api/tickets/route");
     const request = createRequest("/api/tickets", {

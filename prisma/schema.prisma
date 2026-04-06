@@ -133,6 +133,8 @@ model Conversation {
   @@index([channel])
   @@index([status])
   @@index([customerContact])
+  @@index([channel, status])
+  @@index([createdAt])
 }
 
 model Message {
@@ -147,6 +149,7 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
+  @@index([conversationId, createdAt])
 }
 
 // ==================== TICKETS ====================
@@ -235,16 +238,35 @@ model Schedule {
 // ==================== WEBHOOKS ====================
 
 model Webhook {
-  id          String   @id @default(uuid())
+  id          String            @id @default(uuid())
   name        String
-  description String   @default("")
+  description String            @default("")
   url         String
-  method      String   @default("POST")
-  headers     Json     @default("{}")
-  isActive    Boolean  @default(true)
+  method      String            @default("POST")
+  headers     Json              @default("{}")
+  isActive    Boolean           @default(true)
   triggerOn   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  deliveries  WebhookDelivery[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model WebhookDelivery {
+  id          String    @id @default(uuid())
+  webhookId   String
+  webhook     Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event       String
+  payload     Json
+  status      String    @default("pending") // pending, delivered, failed
+  statusCode  Int?
+  attempts    Int       @default(0)
+  lastError   String?
+  nextRetryAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([webhookId])
+  @@index([status, nextRetryAt])
 }
 
 // ==================== ACTIVITY LOG ====================
@@ -313,6 +335,7 @@ model Customer {
   @@index([email])
   @@index([phone])
   @@index([whatsapp])
+  @@index([lastContact])
 }
 
 model CustomerNote {

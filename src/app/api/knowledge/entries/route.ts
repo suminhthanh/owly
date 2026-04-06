@@ -1,23 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const categoryId = searchParams.get("categoryId");
 
-    const entries = await prisma.knowledgeEntry.findMany({
-      where: categoryId ? { categoryId } : undefined,
-      orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
-      include: {
-        category: {
-          select: { id: true, name: true, color: true, icon: true },
-        },
-      },
-    });
+    const where = categoryId ? { categoryId } : {};
 
-    return NextResponse.json(entries);
+    const [entries, total] = await Promise.all([
+      prisma.knowledgeEntry.findMany({
+        where,
+        orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
+        skip,
+        take,
+        include: {
+          category: {
+            select: { id: true, name: true, color: true, icon: true },
+          },
+        },
+      }),
+      prisma.knowledgeEntry.count({ where }),
+    ]);
+
+    return NextResponse.json(paginatedResponse(entries, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch entries:", error);
     return NextResponse.json(

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const channel = searchParams.get("channel");
     const status = searchParams.get("status");
     const search = searchParams.get("search");
@@ -26,24 +28,29 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const conversations = await prisma.conversation.findMany({
-      where,
-      orderBy: { updatedAt: "desc" },
-      include: {
-        messages: {
-          take: 1,
-          orderBy: { createdAt: "desc" },
+    const [conversations, total] = await Promise.all([
+      prisma.conversation.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        skip,
+        take,
+        include: {
+          messages: {
+            take: 1,
+            orderBy: { createdAt: "desc" },
+          },
+          _count: {
+            select: { messages: true },
+          },
+          tags: {
+            include: { tag: true },
+          },
         },
-        _count: {
-          select: { messages: true },
-        },
-        tags: {
-          include: { tag: true },
-        },
-      },
-    });
+      }),
+      prisma.conversation.count({ where }),
+    ]);
 
-    return NextResponse.json(conversations);
+    return NextResponse.json(paginatedResponse(conversations, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch conversations:", error);
     return NextResponse.json(

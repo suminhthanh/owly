@@ -19,6 +19,7 @@ describe("GET /api/conversations", () => {
         tags: [],
       },
     ]);
+    mockPrisma.conversation.count.mockResolvedValue(1);
 
     const { GET } = await import("@/app/api/conversations/route");
     const request = createRequest("/api/conversations");
@@ -26,12 +27,14 @@ describe("GET /api/conversations", () => {
     const data = await parseJsonResponse(response);
 
     expect(response.status).toBe(200);
-    expect(data).toHaveLength(1);
-    expect(data[0].customerName).toBe("John Doe");
+    expect(data.data).toHaveLength(1);
+    expect(data.data[0].customerName).toBe("John Doe");
+    expect(data.pagination.total).toBe(1);
   });
 
   it("should filter by channel", async () => {
     mockPrisma.conversation.findMany.mockResolvedValue([]);
+    mockPrisma.conversation.count.mockResolvedValue(0);
 
     const { GET } = await import("@/app/api/conversations/route");
     const request = createRequest("/api/conversations", {
@@ -48,6 +51,7 @@ describe("GET /api/conversations", () => {
 
   it("should filter by status", async () => {
     mockPrisma.conversation.findMany.mockResolvedValue([]);
+    mockPrisma.conversation.count.mockResolvedValue(0);
 
     const { GET } = await import("@/app/api/conversations/route");
     const request = createRequest("/api/conversations", {
@@ -64,6 +68,7 @@ describe("GET /api/conversations", () => {
 
   it("should filter by search term", async () => {
     mockPrisma.conversation.findMany.mockResolvedValue([]);
+    mockPrisma.conversation.count.mockResolvedValue(0);
 
     const { GET } = await import("@/app/api/conversations/route");
     const request = createRequest("/api/conversations", {

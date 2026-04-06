@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const status = searchParams.get("status");
     const priority = searchParams.get("priority");
     const departmentId = searchParams.get("departmentId");
@@ -31,35 +33,40 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const tickets = await prisma.ticket.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        conversation: {
-          select: {
-            id: true,
-            customerName: true,
-            channel: true,
-            status: true,
+    const [tickets, total] = await Promise.all([
+      prisma.ticket.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+        include: {
+          conversation: {
+            select: {
+              id: true,
+              customerName: true,
+              channel: true,
+              status: true,
+            },
+          },
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-        department: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+      }),
+      prisma.ticket.count({ where }),
+    ]);
 
-    return NextResponse.json(tickets);
+    return NextResponse.json(paginatedResponse(tickets, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch tickets:", error);
     return NextResponse.json(

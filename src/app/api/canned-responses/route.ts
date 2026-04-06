@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const category = searchParams.get("category");
 
     const where: Record<string, unknown> = {};
@@ -13,12 +15,17 @@ export async function GET(request: NextRequest) {
       where.category = category;
     }
 
-    const responses = await prisma.cannedResponse.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
+    const [responses, total] = await Promise.all([
+      prisma.cannedResponse.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.cannedResponse.count({ where }),
+    ]);
 
-    return NextResponse.json(responses);
+    return NextResponse.json(paginatedResponse(responses, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch canned responses:", error);
     return NextResponse.json(

@@ -14,12 +14,15 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Hesper-Labs/owly/actions/workflows/ci.yml"><img src="https://github.com/Hesper-Labs/owly/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" />
+  <img src="https://img.shields.io/badge/version-0.1.1-brightgreen.svg" alt="Version" />
+  <img src="https://img.shields.io/badge/tests-177%20passed-success.svg" alt="Tests" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-green.svg" alt="Node" />
-  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
   <img src="https://img.shields.io/badge/typescript-5.x-blue.svg" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/next.js-14-black.svg" alt="Next.js" />
+  <img src="https://img.shields.io/badge/next.js-16-black.svg" alt="Next.js" />
   <img src="https://img.shields.io/badge/PostgreSQL-16+-336791.svg" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
 <p align="center">

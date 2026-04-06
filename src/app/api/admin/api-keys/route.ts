@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 function maskKey(key: string): string {
   if (key.length <= 8) return key;
@@ -12,18 +13,26 @@ function generateApiKey(): string {
   return "owly_" + crypto.randomBytes(32).toString("hex");
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const keys = await prisma.apiKey.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
+
+    const [keys, total] = await Promise.all([
+      prisma.apiKey.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.apiKey.count(),
+    ]);
 
     const masked = keys.map((k) => ({
       ...k,
       key: maskKey(k.key),
     }));
 
-    return NextResponse.json(masked);
+    return NextResponse.json(paginatedResponse(masked, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch API keys:", error);
     return NextResponse.json(

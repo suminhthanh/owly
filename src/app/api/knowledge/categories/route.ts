@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const categories = await prisma.category.findMany({
-      orderBy: { sortOrder: "asc" },
-      include: {
-        _count: {
-          select: { entries: true },
-        },
-      },
-    });
+    const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
 
-    return NextResponse.json(categories);
+    const [categories, total] = await Promise.all([
+      prisma.category.findMany({
+        orderBy: { sortOrder: "asc" },
+        skip,
+        take,
+        include: {
+          _count: {
+            select: { entries: true },
+          },
+        },
+      }),
+      prisma.category.count(),
+    ]);
+
+    return NextResponse.json(paginatedResponse(categories, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch categories:", error);
     return NextResponse.json(

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const type = searchParams.get("type");
 
     const where: Record<string, unknown> = {};
@@ -13,12 +15,17 @@ export async function GET(request: NextRequest) {
       where.type = type;
     }
 
-    const rules = await prisma.automationRule.findMany({
-      where,
-      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-    });
+    const [rules, total] = await Promise.all([
+      prisma.automationRule.findMany({
+        where,
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+        skip,
+        take,
+      }),
+      prisma.automationRule.count({ where }),
+    ]);
 
-    return NextResponse.json(rules);
+    return NextResponse.json(paginatedResponse(rules, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch automation rules:", error);
     return NextResponse.json(

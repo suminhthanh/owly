@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const { page, limit, skip, take } = parsePagination(searchParams);
     const search = searchParams.get("search");
     const isBlocked = searchParams.get("isBlocked");
 
@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
       prisma.customer.findMany({
         where,
         orderBy: { lastContact: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip,
+        take,
         include: {
           _count: {
             select: { notes: true },
@@ -41,15 +41,7 @@ export async function GET(request: NextRequest) {
       prisma.customer.count({ where }),
     ]);
 
-    return NextResponse.json({
-      customers,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
+    return NextResponse.json(paginatedResponse(customers, total, page, limit));
   } catch (error) {
     logger.error("Failed to fetch customers:", error);
     return NextResponse.json(
