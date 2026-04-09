@@ -18,7 +18,7 @@ async function reconnectChannels() {
 
     for (const ch of channels) {
       if (ch.type === "zalo-personal") {
-        const { connectZalo } = await import("@/lib/channels/zalo-personal");
+        const { connectZalo } = await import("@/lib/channels/zalo");
         const result = await connectZalo();
         const { logger } = await import("@/lib/logger");
         if (result.success) {

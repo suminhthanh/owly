@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthenticated } from "@/lib/route-auth";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { sanitizeChannelCredentials } from "@/lib/security";
+import { sanitizeChannelCredentials, ZALO_SAFE_CONFIG_FIELDS } from "@/lib/security";
+import { validateBody, zaloActionSchema, zaloConfigUpdateSchema } from "@/lib/validations";
 import {
   getZaloStatus,
   connectZalo,
   startZaloQRLogin,
   disconnectZalo,
-} from "@/lib/channels/zalo-personal";
+} from "@/lib/channels/zalo";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request, "channels:read");
@@ -24,16 +25,21 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { isActive, config } = body;
+    const parsed = validateBody(zaloConfigUpdateSchema, body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const { isActive, config } = parsed.data;
 
     // Merge config with existing to preserve server-written credentials
     let mergedConfig = config;
     if (config) {
       const existing = await prisma.channel.findUnique({ where: { type: "zalo-personal" }, select: { config: true } });
       const existingConfig = (typeof existing?.config === "object" && existing?.config !== null ? existing.config : {}) as Record<string, unknown>;
-      // Strip credential fields from client input — these are server-managed (encrypted)
+      // Only accept safe config keys from client; preserve credentials from server
       const safeClientConfig = Object.fromEntries(
-        Object.entries(config as Record<string, unknown>).filter(([k]) => !["imei", "cookie", "userAgent"].includes(k))
+        Object.entries(config).filter(([k]) => ZALO_SAFE_CONFIG_FIELDS.includes(k))
       );
       mergedConfig = { ...existingConfig, ...safeClientConfig };
     }
@@ -41,13 +47,13 @@ export async function PUT(request: NextRequest) {
     const channel = await prisma.channel.upsert({
       where: { type: "zalo-personal" },
       update: {
-        isActive: typeof isActive === "boolean" ? isActive : undefined,
-        config: mergedConfig ?? undefined,
+        isActive: isActive ?? undefined,
+        config: mergedConfig as object ?? undefined,
       },
       create: {
         type: "zalo-personal",
-        isActive: typeof isActive === "boolean" ? isActive : false,
-        config: mergedConfig ?? {},
+        isActive: isActive ?? false,
+        config: (mergedConfig as object) ?? {},
         status: "disconnected",
       },
     });
@@ -65,7 +71,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { action } = body;
+    const parsed = validateBody(zaloActionSchema, body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const { action } = parsed.data;
 
     if (action === "qr-login") {
       const result = await startZaloQRLogin();
@@ -82,7 +93,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "disconnected", message: "Zalo disconnected" });
     }
 
-    return NextResponse.json({ error: "Invalid action. Use: qr-login, connect, disconnect" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     logger.error("[Zalo] API action failed:", error);
     return NextResponse.json({ error: "Failed to perform action" }, { status: 500 });

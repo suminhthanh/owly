@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { requireAuth, isAuthenticated } from "@/lib/route-auth";
 import { emitNewMessage } from "@/lib/realtime";
-import { sendZaloMessage } from "@/lib/channels/zalo-personal";
+import { sendZaloMessage } from "@/lib/channels/zalo";
 
 export async function GET(
   request: NextRequest,

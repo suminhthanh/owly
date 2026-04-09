@@ -97,11 +97,13 @@ export function sanitizeEmailSubject(subject: string): string {
   return subject.replace(/[\r\n]/g, " ").trim();
 }
 
-const ZALO_CREDENTIAL_FIELDS = ["imei", "cookie", "userAgent"];
+// Allowlist of safe Zalo config fields that can be exposed in API responses.
+// New credential fields from zca-js are automatically excluded.
+export const ZALO_SAFE_CONFIG_FIELDS = ["filterMode", "filterList"];
 
 /**
  * Strip Zalo credential fields from channel config for API responses.
- * Works for any channel object shape — checks type and strips if zalo-personal.
+ * Uses allowlist — only known-safe fields pass through.
  */
 export function sanitizeChannelCredentials<T extends Record<string, unknown>>(channel: T): T {
   const type = "type" in channel ? channel.type : undefined;
@@ -111,7 +113,7 @@ export function sanitizeChannelCredentials<T extends Record<string, unknown>>(ch
   const cfg = config as Record<string, unknown>;
   const safe: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(cfg)) {
-    if (!ZALO_CREDENTIAL_FIELDS.includes(k)) safe[k] = v;
+    if (ZALO_SAFE_CONFIG_FIELDS.includes(k)) safe[k] = v;
   }
   return { ...channel, config: safe };
 }

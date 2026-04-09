@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { requireAuth, isAuthenticated } from "@/lib/route-auth";
-import { disconnectZalo } from "@/lib/channels/zalo-personal";
-import { sanitizeChannelCredentials } from "@/lib/security";
+import { disconnectZalo } from "@/lib/channels/zalo";
+import { sanitizeChannelCredentials, ZALO_SAFE_CONFIG_FIELDS } from "@/lib/security";
 
 const CHANNEL_TYPES = ["whatsapp", "email", "phone", "sms", "telegram", "zalo-personal"];
 
@@ -71,9 +71,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     if (config) {
       const existing = await prisma.channel.findUnique({ where: { type }, select: { config: true } });
       const existingConfig = (typeof existing?.config === "object" && existing?.config !== null ? existing.config : {}) as Record<string, unknown>;
-      // Strip credential fields from client input — these are server-managed (encrypted)
+      // Only accept safe config keys from client; preserve server-managed credentials
       const safeClientConfig = Object.fromEntries(
-        Object.entries(config as Record<string, unknown>).filter(([k]) => !["imei", "cookie", "userAgent"].includes(k))
+        Object.entries(config as Record<string, unknown>).filter(([k]) => ZALO_SAFE_CONFIG_FIELDS.includes(k))
       );
       mergedConfig = { ...existingConfig, ...safeClientConfig };
     }

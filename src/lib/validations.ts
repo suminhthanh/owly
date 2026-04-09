@@ -213,6 +213,16 @@ export const createNoteSchema = z.object({
   authorName: z.string().max(200).optional(),
 });
 
+// Zalo channel
+export const zaloActionSchema = z.object({
+  action: z.enum(["qr-login", "connect", "disconnect"]),
+});
+
+export const zaloConfigUpdateSchema = z.object({
+  isActive: z.boolean().optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
+});
+
 // Pagination helper
 export { paginationSchema };
 
