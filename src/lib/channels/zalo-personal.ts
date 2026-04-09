@@ -340,19 +340,33 @@ async function handleIncomingMessage(api: API, message: { data: Record<string, u
   );
 
   // Find or create conversation
-  let conversation = await prisma.conversation.findFirst({
-    where: {
-      channel: "zalo-personal",
-      status: { in: ["active", "escalated"] },
-      OR: [{ customerId }, { customerContact: senderId }],
-    },
-  });
+  // Groups: match by threadId in metadata so each group has its own conversation
+  // DMs: match by customerId or senderId as before
+  let conversation: Awaited<ReturnType<typeof prisma.conversation.findFirst>>;
+  if (isGroup) {
+    conversation = await prisma.conversation.findFirst({
+      where: {
+        channel: "zalo-personal",
+        status: { in: ["active", "escalated"] },
+        metadata: { path: ["zaloThreadId"], equals: message.threadId },
+      },
+    });
+  } else {
+    conversation = await prisma.conversation.findFirst({
+      where: {
+        channel: "zalo-personal",
+        status: { in: ["active", "escalated"] },
+        OR: [{ customerId }, { customerContact: senderId }],
+      },
+    });
+  }
 
   const isNew = !conversation;
   if (!conversation) {
-    // For groups, use group name as conversation name; for DMs, use sender name
+    // Groups: use threadId as contact so conversations are per-group, not per-sender
+    const conversationContact = isGroup ? message.threadId : senderId;
     const conversationName = isGroup && groupName ? groupName : senderName;
-    conversation = await createNewConversation("zalo-personal", conversationName, senderId, customerId);
+    conversation = await createNewConversation("zalo-personal", conversationName, conversationContact, customerId);
   }
 
   // Only store thread metadata and auto-tag on new conversations
@@ -387,7 +401,22 @@ async function handleSelfMessage(threadId: string, content: string): Promise<voi
     return;
   }
 
-  // Save as "operator" role — human reply, not AI
+  // Skip if this message was already saved recently (from dashboard reply or AI response)
+  const cutoff = new Date(Date.now() - 10_000); // 10s window
+  const duplicate = await prisma.message.findFirst({
+    where: {
+      conversationId: conversation.id,
+      content,
+      role: { in: ["operator", "assistant"] },
+      createdAt: { gte: cutoff },
+    },
+  });
+  if (duplicate) {
+    logger.debug("[Zalo] Self-message is duplicate, skipping", { conversationId: conversation.id });
+    return;
+  }
+
+  // Save as "operator" role — human reply from another device, not from dashboard
   const saved = await prisma.message.create({
     data: {
       conversationId: conversation.id,

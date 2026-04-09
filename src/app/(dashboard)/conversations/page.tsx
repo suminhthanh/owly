@@ -136,6 +136,30 @@ export default function ConversationsPage() {
     fetchConversations();
   }, [fetchConversations]);
 
+  // Subscribe to real-time SSE events for live updates
+  useEffect(() => {
+    const es = new EventSource("/api/realtime?channel=global");
+    es.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (
+          payload.type === "conversation:new" ||
+          payload.type === "message:new" ||
+          payload.type === "conversation:updated"
+        ) {
+          fetchConversations();
+          // Refresh detail view if the event is for the currently selected conversation
+          if (selectedId && payload.conversationId === selectedId) {
+            fetchConversationDetail(selectedId);
+          }
+        }
+      } catch {
+        // ignore malformed events
+      }
+    };
+    return () => es.close();
+  }, [fetchConversations, fetchConversationDetail, selectedId]);
+
   useEffect(() => {
     if (selectedId) {
       fetchConversationDetail(selectedId);

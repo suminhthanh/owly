@@ -35,7 +35,8 @@ async function getRedisClient() {
 
   try {
     // Dynamic import - only loads if Redis URL is configured
-    const { createClient } = await import("redis" as string);
+    // @ts-expect-error -- redis is an optional dependency, resolved at runtime via serverExternalPackages
+    const { createClient } = await import("redis");
     const client = createClient({ url: redisUrl });
     await client.connect();
     redisClient = client;
